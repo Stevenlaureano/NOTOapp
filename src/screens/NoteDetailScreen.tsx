@@ -47,23 +47,35 @@ export default function NoteDetailScreen({ route, navigation }: any) {
     setSaving(false);
   };
 
-  const handleDelete = () => {
-    Alert.alert('Delete Note', 'Are you sure you want to delete this note?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          const { error } = await supabase.from('notes').delete().eq('id', note.id);
-          if (error) {
-            Alert.alert('Error', 'Could not delete note.');
-          } else {
-            // Go back — HomeScreen useFocusEffect will re-fetch and note will be gone
-            navigation.navigate('Home');
-          }
+  const handleDelete = async () => {
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm('Are you sure you want to delete this note?');
+      if (confirmed) {
+        const { error } = await supabase.from('notes').delete().eq('id', note.id);
+        if (error) {
+          window.alert('Could not delete note: ' + error.message);
+        } else {
+          navigation.navigate('Home');
+        }
+      }
+    } else {
+      Alert.alert('Delete Note', 'Are you sure you want to delete this note?', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            const { error } = await supabase.from('notes').delete().eq('id', note.id);
+            if (error) {
+              Alert.alert('Error', 'Could not delete note.');
+            } else {
+              // Go back — HomeScreen useFocusEffect will re-fetch and note will be gone
+              navigation.navigate('Home');
+            }
+          },
         },
-      },
-    ]);
+      ]);
+    }
   };
 
   return (
@@ -160,7 +172,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 16,
     top: 16,
-    padding: 4,
+    padding: 10,
+    zIndex: 10,
   },
   headerTitle: {
     fontSize: 26,
@@ -169,12 +182,14 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     flex: 1,
     textAlign: 'center',
+    zIndex: 1,
   },
   deleteBtn: {
     position: 'absolute',
     right: 16,
     top: 16,
-    padding: 4,
+    padding: 10,
+    zIndex: 10,
   },
 
   scrollContent: {

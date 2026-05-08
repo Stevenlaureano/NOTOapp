@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   StyleSheet,
@@ -18,6 +18,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../supabase';
+import { Audio } from 'expo-av';
 
 type Note = {
   id: string;
@@ -35,6 +36,159 @@ export default function HomeScreen({ navigation }: any) {
   const [loadingNotes, setLoadingNotes] = useState(true);
   const [adding, setAdding] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+
+  // ─── Voice to Text State ──────────────────────────────────────────────
+  const [micStatus, setMicStatus] = useState<'idle' | 'recording' | 'stopping' | 'converting'>('idle');
+  // Web refs
+  const mediaRecorderRef = useRef<any>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<any>(null);
+  // Native (mobile) ref
+  const nativeRecordingRef = useRef<Audio.Recording | null>(null);
+
+  const OPENAI_API_KEY = "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";
+
+  const transcribeWithWhisper = async (uri: string, mimeType: string, filename: string) => {
+    setMicStatus('converting');
+    try {
+      const formData = new FormData();
+      formData.append('file', { uri, name: filename, type: mimeType } as any);
+      formData.append('model', 'whisper-1');
+
+      const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`API Error: ${response.status} ${errText}`);
+      }
+
+      const data = await response.json();
+      setBody(prev => prev ? prev + ' ' + data.text : data.text);
+      Alert.alert('✅ Done', 'Voice converted successfully!');
+    } catch (error: any) {
+      console.error('Whisper API Error:', error);
+      Alert.alert('Error', 'Transcription failed: ' + error.message);
+    } finally {
+      setMicStatus('idle');
+    }
+  };
+
+  const handleMicPress = async () => {
+    // ── STOP path ─────────────────────────────────────────────────────────
+    if (micStatus === 'recording') {
+      setMicStatus('stopping');
+
+      if (Platform.OS === 'web') {
+        // Web: stop MediaRecorder (onstop callback handles Whisper)
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+          mediaRecorderRef.current.stop();
+        }
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach((track: any) => track.stop());
+        }
+      } else {
+        // Native: stop expo-av recording then transcribe
+        try {
+          if (nativeRecordingRef.current) {
+            await nativeRecordingRef.current.stopAndUnloadAsync();
+            await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
+            const uri = nativeRecordingRef.current.getURI();
+            nativeRecordingRef.current = null;
+            if (uri) {
+              await transcribeWithWhisper(uri, 'audio/m4a', 'audio.m4a');
+            } else {
+              setMicStatus('idle');
+            }
+          }
+        } catch (err: any) {
+          console.error('Stop recording error:', err);
+          Alert.alert('Error', 'Failed to stop recording: ' + err.message);
+          setMicStatus('idle');
+        }
+      }
+      return;
+    }
+
+    // ── START path ────────────────────────────────────────────────────────
+    if (micStatus === 'idle') {
+      setBody('');
+
+      if (Platform.OS === 'web') {
+        // Web: MediaRecorder + Whisper
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          streamRef.current = stream;
+
+          const mediaRecorder = new (window as any).MediaRecorder(stream);
+          mediaRecorderRef.current = mediaRecorder;
+          audioChunksRef.current = [];
+
+          mediaRecorder.ondataavailable = (event: any) => {
+            if (event.data.size > 0) audioChunksRef.current.push(event.data);
+          };
+
+          mediaRecorder.onstop = async () => {
+            setMicStatus('converting');
+            const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+            const formData = new FormData();
+            formData.append('file', audioBlob, 'audio.webm');
+            formData.append('model', 'whisper-1');
+            try {
+              const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` },
+                body: formData,
+              });
+              if (!response.ok) throw new Error(`API Error: ${response.status}`);
+              const data = await response.json();
+              setBody(prev => prev ? prev + ' ' + data.text : data.text);
+              window.alert('Voice converted successfully!');
+            } catch (error: any) {
+              window.alert('Transcription failed: ' + error.message);
+            } finally {
+              setMicStatus('idle');
+            }
+          };
+
+          mediaRecorder.start();
+          setMicStatus('recording');
+        } catch (err: any) {
+          setMicStatus('idle');
+          window.alert(err.name === 'NotAllowedError'
+            ? 'Microphone Access Denied. Please allow microphone access in your browser.'
+            : 'Error accessing microphone: ' + err.message);
+        }
+      } else {
+        // Native mobile: expo-av Recording + Whisper
+        try {
+          const { status } = await Audio.requestPermissionsAsync();
+          if (status !== 'granted') {
+            Alert.alert('Permission Denied', 'Microphone permission is required for voice recording.');
+            return;
+          }
+
+          await Audio.setAudioModeAsync({
+            allowsRecordingIOS: true,
+            playsInSilentModeIOS: true,
+          });
+
+          const { recording } = await Audio.Recording.createAsync(
+            Audio.RecordingOptionsPresets.HIGH_QUALITY
+          );
+          nativeRecordingRef.current = recording;
+          setMicStatus('recording');
+        } catch (err: any) {
+          console.error('Start recording error:', err);
+          Alert.alert('Error', 'Failed to start recording: ' + err.message);
+          setMicStatus('idle');
+        }
+      }
+    }
+  };
 
   // ─── Fetch notes from Supabase ───────────────────────────────────────
   const fetchNotes = useCallback(async () => {
@@ -108,22 +262,34 @@ export default function HomeScreen({ navigation }: any) {
   };
 
   // ─── Delete note from Supabase ────────────────────────────────────────
-  const handleDeleteNote = (id: string) => {
-    Alert.alert('Delete Note', 'Are you sure you want to delete this note?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          const { error } = await supabase.from('notes').delete().eq('id', id);
-          if (error) {
-            Alert.alert('Error', 'Could not delete note.');
-          } else {
-            setNotes((prev) => prev.filter((n) => n.id !== id));
-          }
+  const handleDeleteNote = async (id: string) => {
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm('Are you sure you want to delete this note?');
+      if (confirmed) {
+        const { error } = await supabase.from('notes').delete().eq('id', id);
+        if (error) {
+          window.alert('Could not delete note: ' + error.message);
+        } else {
+          setNotes((prev) => prev.filter((n) => n.id !== id));
+        }
+      }
+    } else {
+      Alert.alert('Delete Note', 'Are you sure you want to delete this note?', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            const { error } = await supabase.from('notes').delete().eq('id', id);
+            if (error) {
+              Alert.alert('Error', 'Could not delete note.');
+            } else {
+              setNotes((prev) => prev.filter((n) => n.id !== id));
+            }
+          },
         },
-      },
-    ]);
+      ]);
+    }
   };
 
   const handleSignOut = async () => {
@@ -178,9 +344,20 @@ export default function HomeScreen({ navigation }: any) {
                 numberOfLines={6}
                 textAlignVertical="top"
               />
-              <View style={styles.micIconWrapper}>
-                <Ionicons name="mic" size={22} color="#888" />
-              </View>
+              <TouchableOpacity 
+                style={styles.micIconWrapper} 
+                onPress={handleMicPress}
+                activeOpacity={0.7}
+                disabled={micStatus === 'converting'}
+              >
+                {micStatus === 'stopping' || micStatus === 'converting' ? (
+                  <ActivityIndicator size="small" color="#FF6B6B" />
+                ) : (
+                  <Ionicons name="mic" size={22} color={micStatus === 'recording' ? "#FF6B6B" : "#888"} />
+                )}
+                {micStatus === 'recording' && <Text style={{fontSize: 10, color: '#FF6B6B', marginTop: 2}}>Recording...</Text>}
+                {micStatus === 'converting' && <Text style={{fontSize: 10, color: '#FF6B6B', marginTop: 2}}>Converting...</Text>}
+              </TouchableOpacity>
             </View>
 
             {/* ── Add Note Button ── */}

@@ -7,6 +7,7 @@ import { supabase } from '../supabase';
 export default function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -67,9 +68,16 @@ export default function LoginScreen({ navigation }: any) {
                 placeholderTextColor="#A0A0A0"
                 value={password}
                 onChangeText={setPassword}
-                secureTextEntry
+                secureTextEntry={!showPassword}
               />
-              <Ionicons name="lock-closed" size={20} color="#000" style={styles.icon} />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                <Ionicons 
+                  name={showPassword ? "lock-open" : "lock-closed"} 
+                  size={20} 
+                  color="#000" 
+                  style={styles.icon} 
+                />
+              </TouchableOpacity>
             </View>
 
             {errorMsg ? <Text style={styles.errorText}>{errorMsg}</Text> : null}

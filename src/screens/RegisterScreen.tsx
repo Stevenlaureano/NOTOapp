@@ -8,6 +8,8 @@ export default function RegisterScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -84,9 +86,16 @@ export default function RegisterScreen({ navigation }: any) {
                 placeholderTextColor="#A0A0A0"
                 value={password}
                 onChangeText={setPassword}
-                secureTextEntry
+                secureTextEntry={!showPassword}
               />
-              <Ionicons name="lock-closed" size={20} color="#000" style={styles.icon} />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                <Ionicons 
+                  name={showPassword ? "lock-open" : "lock-closed"} 
+                  size={20} 
+                  color="#000" 
+                  style={styles.icon} 
+                />
+              </TouchableOpacity>
             </View>
 
             <View style={styles.inputContainer}>
@@ -96,9 +105,16 @@ export default function RegisterScreen({ navigation }: any) {
                 placeholderTextColor="#A0A0A0"
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
-                secureTextEntry
+                secureTextEntry={!showConfirmPassword}
               />
-              <Ionicons name="lock-closed" size={20} color="#000" style={styles.icon} />
+              <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+                <Ionicons 
+                  name={showConfirmPassword ? "lock-open" : "lock-closed"} 
+                  size={20} 
+                  color="#000" 
+                  style={styles.icon} 
+                />
+              </TouchableOpacity>
             </View>
 
             {errorMsg ? <Text style={styles.errorText}>{errorMsg}</Text> : null}
