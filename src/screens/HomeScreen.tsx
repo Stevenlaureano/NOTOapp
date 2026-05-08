@@ -83,7 +83,6 @@ export default function HomeScreen({ navigation }: any) {
       setMicStatus('stopping');
 
       if (Platform.OS === 'web') {
-        // Web: stop MediaRecorder (onstop callback handles Whisper)
         if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
           mediaRecorderRef.current.stop();
         }
@@ -91,7 +90,6 @@ export default function HomeScreen({ navigation }: any) {
           streamRef.current.getTracks().forEach((track: any) => track.stop());
         }
       } else {
-        // Native: stop expo-av recording then transcribe
         try {
           if (nativeRecordingRef.current) {
             await nativeRecordingRef.current.stopAndUnloadAsync();
@@ -118,7 +116,6 @@ export default function HomeScreen({ navigation }: any) {
       setBody('');
 
       if (Platform.OS === 'web') {
-        // Web: MediaRecorder + Whisper
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
           streamRef.current = stream;
@@ -163,7 +160,6 @@ export default function HomeScreen({ navigation }: any) {
             : 'Error accessing microphone: ' + err.message);
         }
       } else {
-        // Native mobile: expo-av Recording + Whisper
         try {
           const { status } = await Audio.requestPermissionsAsync();
           if (status !== 'granted') {
@@ -210,7 +206,7 @@ export default function HomeScreen({ navigation }: any) {
     setRefreshing(false);
   }, []);
 
-  // Re-fetch every time this screen becomes active (e.g. after returning from NoteDetail)
+  // Re-fetch every time this screen becomes active
   useFocusEffect(
     useCallback(() => {
       setLoadingNotes(true);
@@ -344,8 +340,8 @@ export default function HomeScreen({ navigation }: any) {
                 numberOfLines={6}
                 textAlignVertical="top"
               />
-              <TouchableOpacity 
-                style={styles.micIconWrapper} 
+              <TouchableOpacity
+                style={styles.micIconWrapper}
                 onPress={handleMicPress}
                 activeOpacity={0.7}
                 disabled={micStatus === 'converting'}
@@ -355,8 +351,8 @@ export default function HomeScreen({ navigation }: any) {
                 ) : (
                   <Ionicons name="mic" size={22} color={micStatus === 'recording' ? "#FF6B6B" : "#888"} />
                 )}
-                {micStatus === 'recording' && <Text style={{fontSize: 10, color: '#FF6B6B', marginTop: 2}}>Recording...</Text>}
-                {micStatus === 'converting' && <Text style={{fontSize: 10, color: '#FF6B6B', marginTop: 2}}>Converting...</Text>}
+                {micStatus === 'recording' && <Text style={{ fontSize: 10, color: '#FF6B6B', marginTop: 2 }}>Recording...</Text>}
+                {micStatus === 'converting' && <Text style={{ fontSize: 10, color: '#FF6B6B', marginTop: 2 }}>Converting...</Text>}
               </TouchableOpacity>
             </View>
 
@@ -390,12 +386,9 @@ export default function HomeScreen({ navigation }: any) {
                       { backgroundColor: NOTE_COLORS[index % NOTE_COLORS.length] },
                     ]}
                   >
-                    {/* Title — tap to open NoteDetail */}
                     <TouchableOpacity
                       style={styles.noteCardTitleArea}
-                      onPress={() =>
-                        navigation.navigate('NoteDetail', { note })
-                      }
+                      onPress={() => navigation.navigate('NoteDetail', { note })}
                       activeOpacity={0.7}
                     >
                       <Text style={styles.noteCardText} numberOfLines={1}>
@@ -403,7 +396,6 @@ export default function HomeScreen({ navigation }: any) {
                       </Text>
                     </TouchableOpacity>
 
-                    {/* Delete button */}
                     <TouchableOpacity
                       style={styles.noteCardAction}
                       onPress={() => handleDeleteNote(note.id)}
@@ -412,18 +404,14 @@ export default function HomeScreen({ navigation }: any) {
                       <Ionicons name="trash-outline" size={16} color="#D32F2F" />
                     </TouchableOpacity>
 
-                    {/* Open / view note */}
                     <TouchableOpacity
                       style={styles.noteCardAction}
-                      onPress={() =>
-                        navigation.navigate('NoteDetail', { note })
-                      }
+                      onPress={() => navigation.navigate('NoteDetail', { note })}
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     >
                       <Ionicons name="arrow-forward" size={18} color="#3B0764" />
                     </TouchableOpacity>
 
-                    {/* Quiz / lightbulb button */}
                     <TouchableOpacity
                       style={styles.quizBtn}
                       onPress={() => navigation.navigate('Quiz', { note })}
@@ -436,7 +424,6 @@ export default function HomeScreen({ navigation }: any) {
               )}
             </View>
 
-            {/* ── Bottom lightbulb (decorative, links to first note quiz) ── */}
             {notes.length > 0 && (
               <TouchableOpacity
                 style={styles.bottomBulb}

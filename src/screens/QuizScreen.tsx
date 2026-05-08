@@ -1,16 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
+  Platform,
+  SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
-  View,
-  SafeAreaView,
   TouchableOpacity,
-  Platform,
-  ActivityIndicator,
-  ScrollView,
-  Alert,
+  View
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 
 type Question = {
   question: string;
@@ -49,7 +48,7 @@ export default function QuizScreen({ route, navigation }: any) {
     try {
       console.log('--- STARTING API REQUEST ---');
       console.log('API Key starts with:', OPENAI_API_KEY.substring(0, 8) + '...');
-      
+
       const prompt = `You are a helpful study assistant. Generate a 5-question multiple choice quiz based on the following note. Return ONLY a raw JSON array of objects. Do not include markdown formatting like \`\`\`json or \`\`\`. Each object must have exactly these keys: "question" (string), "options" (array of exactly 4 strings), "correctAnswer" (string, must exactly match one of the options).
       
 Note Title: ${note.title || 'Untitled'}
@@ -73,23 +72,23 @@ Note Content: ${note.body || 'No content provided.'}`;
       if (!response.ok) {
         const errText = await response.text();
         console.error('API Response Text:', errText);
-        
+
         let detailedError = 'Failed to generate quiz from API.';
         if (response.status === 401) detailedError = 'Invalid API Key. Please verify your API key is correct.';
         else if (response.status === 429) detailedError = 'API limit exceeded or out of credits.';
         else detailedError = `API Error (${response.status}): ${errText.substring(0, 100)}`;
-        
+
         throw new Error(detailedError);
       }
 
       const data = await response.json();
       let rawContent = data.choices[0].message.content.trim();
-      
+
       // Strip markdown code blocks if the AI accidentally adds them
       if (rawContent.startsWith('```json')) rawContent = rawContent.substring(7);
       if (rawContent.startsWith('```')) rawContent = rawContent.substring(3);
       if (rawContent.endsWith('```')) rawContent = rawContent.slice(0, -3);
-      
+
       const parsedQuestions: Question[] = JSON.parse(rawContent);
       if (!Array.isArray(parsedQuestions) || parsedQuestions.length === 0) {
         throw new Error('Received invalid quiz format from AI.');
@@ -99,7 +98,7 @@ Note Content: ${note.body || 'No content provided.'}`;
     } catch (err: any) {
       console.error('--- API CATCH ERROR ---');
       console.error(err);
-      
+
       // If it's a TypeError, it might be a CORS or Network issue
       if (err.name === 'TypeError' || err.message === 'Failed to fetch') {
         setError('Network Error or CORS issue: Could not reach the API. Please check your connection or CORS settings.');
@@ -147,10 +146,10 @@ Note Content: ${note.body || 'No content provided.'}`;
 
   const handleOptionSelect = (option: string) => {
     if (isAnswered) return;
-    
+
     setSelectedOption(option);
     setIsAnswered(true);
-    
+
     if (option === questions[currentIndex].correctAnswer) {
       setScore(prev => prev + 1);
     }
@@ -202,12 +201,12 @@ Note Content: ${note.body || 'No content provided.'}`;
             <Ionicons name="alert-circle-outline" size={64} color="#FFB4B4" />
             <Text style={styles.errorText}>Oops! Failed to load quiz.</Text>
             <Text style={styles.subText}>{error}</Text>
-            <View style={{flexDirection: 'row', gap: 12}}>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
               <TouchableOpacity style={styles.retryBtn} onPress={generateQuiz}>
                 <Text style={styles.retryBtnText}>Try Again</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.retryBtn, {backgroundColor: 'rgba(255,255,255,0.2)'}]} onPress={useFallbackQuiz}>
-                <Text style={[styles.retryBtnText, {color: '#fff'}]}>Play Fallback Quiz</Text>
+              <TouchableOpacity style={[styles.retryBtn, { backgroundColor: 'rgba(255,255,255,0.2)' }]} onPress={useFallbackQuiz}>
+                <Text style={[styles.retryBtnText, { color: '#fff' }]}>Play Fallback Quiz</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -227,15 +226,15 @@ Note Content: ${note.body || 'No content provided.'}`;
             <Text style={styles.resultsTitle}>Quiz Complete!</Text>
             <Text style={styles.scoreText}>{score} / {questions.length}</Text>
             <Text style={styles.percentageText}>{percentage}% Correct</Text>
-            
+
             <View style={styles.actionsRow}>
               <TouchableOpacity style={styles.actionBtn} onPress={generateQuiz}>
-                <Ionicons name="refresh" size={20} color="#FF2D78" style={{marginRight: 8}} />
+                <Ionicons name="refresh" size={20} color="#FF2D78" style={{ marginRight: 8 }} />
                 <Text style={styles.actionBtnText}>Retake</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.actionBtn, styles.actionBtnDark]} onPress={() => navigation.navigate('Home')}>
-                <Ionicons name="home" size={20} color="#fff" style={{marginRight: 8}} />
-                <Text style={[styles.actionBtnText, {color: '#fff'}]}>Home</Text>
+                <Ionicons name="home" size={20} color="#fff" style={{ marginRight: 8 }} />
+                <Text style={[styles.actionBtnText, { color: '#fff' }]}>Home</Text>
               </TouchableOpacity>
             </View>
           </View>
