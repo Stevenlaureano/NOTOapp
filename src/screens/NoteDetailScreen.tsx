@@ -41,7 +41,7 @@ export default function NoteDetailScreen({ route, navigation }: any) {
     } else {
       setEdited(false);
       Alert.alert('Saved', 'Your note has been updated!', [
-        { text: 'OK', onPress: () => navigation.goBack() },
+        { text: 'OK', onPress: () => navigation.navigate('Home') },
       ]);
     }
     setSaving(false);
@@ -59,7 +59,7 @@ export default function NoteDetailScreen({ route, navigation }: any) {
             Alert.alert('Error', 'Could not delete note.');
           } else {
             // Go back — HomeScreen useFocusEffect will re-fetch and note will be gone
-            navigation.goBack();
+            navigation.navigate('Home');
           }
         },
       },
@@ -75,7 +75,7 @@ export default function NoteDetailScreen({ route, navigation }: any) {
         >
           {/* ── Header ── */}
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <TouchableOpacity onPress={() => navigation.navigate('Home')} style={styles.backBtn}>
               <Ionicons name="arrow-back" size={24} color="#fff" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Nōto</Text>
