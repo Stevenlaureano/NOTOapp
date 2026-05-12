@@ -61,26 +61,25 @@ export default function HomeScreen({ navigation }: any) {
   // Native (mobile) ref
   const nativeRecordingRef = useRef<Audio.Recording | null>(null);
 
-  const OPENAI_API_KEY = "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";
-
   const transcribeWithWhisper = async (uri: string, mimeType: string, filename: string, language: string | null = null) => {
     setMicStatus('converting');
     try {
       const FileSystem = require('expo-file-system');
-      const parameters: Record<string, string> = { model: 'whisper-1' };
+      const groqApiKey = process.env.EXPO_PUBLIC_GROQ_API_KEY;
+      const parameters: Record<string, string> = { model: 'whisper-large-v3' };
       if (language) {
         parameters.language = language;
       }
 
       const uploadResponse = await FileSystem.uploadAsync(
-        'https://api.openai.com/v1/audio/transcriptions',
+        'https://api.groq.com/openai/v1/audio/transcriptions',
         uri,
         {
           fieldName: 'file',
           httpMethod: 'POST',
           uploadType: FileSystem.FileSystemUploadType.MULTIPART,
           headers: {
-            Authorization: `Bearer ${OPENAI_API_KEY}`,
+            Authorization: `Bearer ${groqApiKey}`,
           },
           parameters,
         }

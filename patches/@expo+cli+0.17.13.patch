@@ -1,0 +1,13 @@
+diff --git a/node_modules/@expo/cli/build/src/start/server/metro/externals.js b/node_modules/@expo/cli/build/src/start/server/metro/externals.js
+index 8341467..2567325 100644
+--- a/node_modules/@expo/cli/build/src/start/server/metro/externals.js
++++ b/node_modules/@expo/cli/build/src/start/server/metro/externals.js
+@@ -21,7 +21,7 @@ const NODE_STDLIB_MODULES = [
+     ...(_module.builtinModules || // @ts-expect-error
+     (process.binding ? Object.keys(process.binding("natives")) : []) || []).filter((x)=>!/^_|^(internal|v8|node-inspect)\/|\//.test(x) && ![
+             "sys"
+-        ].includes(x)
++        ].includes(x) && !x.includes(':')
+     ), 
+ ].sort();
+ exports.NODE_STDLIB_MODULES = NODE_STDLIB_MODULES;
